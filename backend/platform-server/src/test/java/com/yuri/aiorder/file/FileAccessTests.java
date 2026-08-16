@@ -37,7 +37,8 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
 @SpringBootTest(properties = {
-        "app.file.allowed-content-types=application/pdf,model/stl,text/plain",
+        "app.file.allowed-content-types=application/pdf,model/stl,text/plain,application/octet-stream",
+        "app.file.allowed-filename-extensions=pdf,stl,txt",
         "app.file.max-file-size-bytes=12582912",
         "app.file.max-files-per-order=3"
 })
@@ -362,6 +363,33 @@ class FileAccessTests {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(multipartBody))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void uploadTokenAndMultipartRejectDisallowedFilenameExtensionsEvenForGenericMime() throws Exception {
+        mockMvc.perform(post("/files/upload-token")
+                        .header("X-Bootstrap-Role", "DOCTOR")
+                        .header("X-Bootstrap-User-Id", DOCTOR_USER_ID)
+                        .header("X-Bootstrap-Clinic-Id", clinicId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(uploadTokenBody("case.xyz", "application/octet-stream", 1024L)))
+                .andExpect(status().isBadRequest());
+
+        mockMvc.perform(post("/files/multipart/initiate")
+                        .header("X-Bootstrap-Role", "DOCTOR")
+                        .header("X-Bootstrap-User-Id", DOCTOR_USER_ID)
+                        .header("X-Bootstrap-Clinic-Id", clinicId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(multipartInitiateBody("case.xyz", "application/octet-stream", 11L * 1024L * 1024L)))
+                .andExpect(status().isBadRequest());
+
+        mockMvc.perform(post("/files/upload-token")
+                        .header("X-Bootstrap-Role", "DOCTOR")
+                        .header("X-Bootstrap-User-Id", DOCTOR_USER_ID)
+                        .header("X-Bootstrap-Clinic-Id", clinicId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(uploadTokenBody("case.stl", "application/octet-stream", 1024L)))
+                .andExpect(status().isOk());
     }
 
     @Test

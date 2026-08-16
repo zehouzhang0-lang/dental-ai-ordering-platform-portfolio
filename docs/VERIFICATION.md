@@ -3,14 +3,14 @@
 This page records checks performed against the sanitized portfolio archive,
 not against the historical production environment.
 
-## Local verification on 2026-08-16
+## Local verification on 2026-08-17
 
 | Check | Result |
 | --- | --- |
 | Frozen dependency install (`pnpm install --frozen-lockfile`) | PASS |
 | Frontend production build (`pnpm build:frontend`) | PASS |
 | Backend reactor package on Java 21 | PASS |
-| Backend test suite with isolated MySQL, Redis, and MinIO | **348 passed, 0 failed, 0 errors, 0 skipped** |
+| Backend test suite with isolated MySQL, Redis, and MinIO | **350 passed, 0 failed, 0 errors, 0 skipped** |
 | Docker Compose configuration and service health | PASS |
 | Backend container image build | PASS |
 | Frontend multi-stage container image build | PASS |

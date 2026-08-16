@@ -23,7 +23,7 @@ production-note assistance.
   idempotency, optimistic locking, workflow snapshots, and rework gates.
 - Configurable DeepSeek/LangChain4j adapters with audit, rate, budget,
   retry/circuit-breaker, output-guard, and deterministic-fallback paths.
-- A frozen release whose source workflow recorded 348 backend tests with zero
+- A frozen release whose source workflow recorded 350 backend tests with zero
   failures and completed build, deployment, and public login/CORS probes.
 
 It does **not** claim autonomous Agent/RAG behavior, production use of a real

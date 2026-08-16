@@ -5748,16 +5748,16 @@ paths:
               "$ref": "#/components/schemas/LoginRequest"
       responses:
         '200':
-          description: 登录成功
+          description: 登录成功；同时写入 HttpOnly refresh cookie，响应体中的 refreshToken 用于兼容既有客户端。
+          headers:
+            Set-Cookie:
+              description: 路径限定为 /api/auth 的 HttpOnly refresh cookie
+              schema:
+                type: string
           content:
             application/json:
               schema:
-                allOf:
-                - "$ref": "#/components/schemas/CommonResponse"
-                - type: object
-                  properties:
-                    data:
-                      "$ref": "#/components/schemas/LoginResponse"
+                "$ref": "#/components/schemas/LoginResponse"
         '401':
           description: 账号或密码错误
         '400':
@@ -5805,10 +5805,16 @@ paths:
       tags:
       - Auth
       summary: 刷新 Access Token
-      description: 使用仍有效且未登出的 refresh token 返回新的 accessToken，并轮换 refreshToken；客户端必须替换本地保存的 refreshToken。
+      description: 使用请求体或 HttpOnly cookie 中仍有效且未登出的 refresh token 返回新的 accessToken，并轮换 refreshToken 与 cookie。
       security: []
+      parameters:
+      - name: AI_ORDER_REFRESH
+        in: cookie
+        required: false
+        schema:
+          type: string
       requestBody:
-        required: true
+        required: false
         content:
           application/json:
             schema:
@@ -5816,6 +5822,11 @@ paths:
       responses:
         '200':
           description: 刷新成功，返回新的 accessToken 和轮换后的 refreshToken
+          headers:
+            Set-Cookie:
+              description: 轮换后的 HttpOnly refresh cookie
+              schema:
+                type: string
           content:
             application/json:
               schema:
@@ -5840,10 +5851,16 @@ paths:
       tags:
       - Auth
       summary: 登出，服务端使 Token 失效
-      description: 吊销请求体中的 refresh token；既有 accessToken 不做服务端黑名单，等待自然过期。
+      description: 吊销请求体或 HttpOnly cookie 中的 refresh token，并清除 refresh cookie；既有 accessToken 不做服务端黑名单，等待自然过期。
       security: []
+      parameters:
+      - name: AI_ORDER_REFRESH
+        in: cookie
+        required: false
+        schema:
+          type: string
       requestBody:
-        required: true
+        required: false
         content:
           application/json:
             schema:
@@ -5851,6 +5868,11 @@ paths:
       responses:
         '200':
           description: 登出成功
+          headers:
+            Set-Cookie:
+              description: Max-Age=0 的 refresh cookie
+              schema:
+                type: string
         '400':
           "$ref": "#/components/responses/BadRequest"
         '401':

@@ -24,6 +24,16 @@ import {
 const authenticatedFetch = inject(authenticatedFetchKey, fetch)
 
 type ApiResponse<T> = { data: T; message?: string; msg?: string }
+type RestoredOrderFile = {
+  file_id: number
+  source_type: string
+  visibility: string
+  original_filename: string
+  content_type: string
+  file_size: number | null
+  upload_status: string
+  created_at: string
+}
 type CatalogProduct = {
   product_id: number
   product_code: string
@@ -640,6 +650,63 @@ function uploadedSlotIds(item: CaseGroupItem, slotCode: string) {
   return Array.isArray(ids) ? ids.map(Number).filter(Number.isFinite) : []
 }
 
+function distinctFileIds(values: Array<number | string>) {
+  return [...new Set(values.map(Number).filter((value) => Number.isSafeInteger(value) && value > 0))]
+}
+
+function itemSelectedFileIds(item: CaseGroupItem) {
+  return distinctFileIds([
+    ...(item.file_ids ?? []),
+    ...(itemFiles[item.order_id] ?? []).map((file) => file.file_id)
+  ])
+}
+
+function restoredFileKind(file: Pick<RestoredOrderFile, 'original_filename' | 'content_type'>): DoctorFile['kind'] {
+  const filename = file.original_filename.toLowerCase()
+  const contentType = file.content_type.toLowerCase()
+  if (filename.endsWith('.stl') || contentType.includes('stl')) return 'STL'
+  if (filename.endsWith('.pdf') || contentType === 'application/pdf') return 'PDF'
+  if (/\.(jpe?g|png|webp)$/i.test(filename) || contentType.startsWith('image/')) return 'IMAGE'
+  return 'OTHER'
+}
+
+function restoredFileSizeLabel(size: number | null) {
+  if (size == null || !Number.isFinite(size) || size < 0) return '大小未记录'
+  if (size < 1024) return `${size} B`
+  if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`
+  return `${(size / 1024 / 1024).toFixed(1)} MB`
+}
+
+function toDoctorFile(fileId: number, metadata?: RestoredOrderFile): DoctorFile {
+  return {
+    file_id: String(fileId),
+    name: metadata?.original_filename || `附件 #${fileId}`,
+    kind: metadata ? restoredFileKind(metadata) : 'OTHER',
+    size_label: restoredFileSizeLabel(metadata?.file_size ?? null),
+    status: 'READY',
+    uploaded_at: metadata?.created_at || ''
+  }
+}
+
+async function restoreAttachedFiles(restored: CaseGroup) {
+  const metadataById = new Map<number, RestoredOrderFile>()
+  const results = await Promise.allSettled(
+    restored.items.map((item) => api<RestoredOrderFile[]>(`/orders/${item.order_id}/files`))
+  )
+  for (const result of results) {
+    if (result.status !== 'fulfilled') continue
+    for (const file of result.value) metadataById.set(file.file_id, file)
+  }
+
+  sharedFiles.value = distinctFileIds(restored.shared_file_ids ?? [])
+    .map((fileId) => toDoctorFile(fileId, metadataById.get(fileId)))
+  for (const orderId of Object.keys(itemFiles)) delete itemFiles[Number(orderId)]
+  for (const item of restored.items) {
+    itemFiles[item.order_id] = distinctFileIds(item.file_ids ?? [])
+      .map((fileId) => toDoctorFile(fileId, metadataById.get(fileId)))
+  }
+}
+
 function sourceArray(item: CaseGroupItem, key: string) {
   const value = item.form_values[key]
   return Array.isArray(value) ? value.map(String) : []
@@ -713,6 +780,7 @@ async function restoreDraft() {
       selectedOrderId.value = restored.items[0]?.order_id ?? null
       selectedCategoryCode.value = catalog.value?.products.find((product) => product.product_id === restored.items[0]?.product_id)?.category_code ?? ''
       hydrateCaseSettings(restored.items[0])
+      await restoreAttachedFiles(restored)
       step.value = 1
       notice.value = `已恢复草稿 ${restored.group_no}`
     }
@@ -1367,7 +1435,7 @@ function categoryIcon(categoryCode: string) {
   }[categoryCode] ?? '🦷'
 }
 
-async function saveItem(item: CaseGroupItem, silent = false) {
+async function saveItem(item: CaseGroupItem, silent = false, fileIdsOverride?: number[]) {
   if (!group.value) return false
   if (!commitItemObjectFields(item)) {
     if (!silent) ElMessage.warning('请先修正补充信息')
@@ -1391,10 +1459,7 @@ async function saveItem(item: CaseGroupItem, silent = false) {
           form_values: item.form_values,
           material_selections: item.material_selections,
           accessory_selections: item.accessory_selections,
-          file_ids: [
-            ...(item.file_ids ?? []),
-            ...(itemFiles[item.order_id] ?? []).map((file) => Number(file.file_id))
-          ],
+          file_ids: fileIdsOverride ?? itemSelectedFileIds(item),
           expected_draft_version: group.value.draft_version
         })
       }
@@ -1449,10 +1514,10 @@ async function uploadProductFiles(event: Event, item: CaseGroupItem, slotCode = 
     const nextSlots = slotFiles && typeof slotFiles === 'object' && !Array.isArray(slotFiles)
       ? { ...(slotFiles as Record<string, unknown>) }
       : {}
-    nextSlots[slotCode] = [
+    nextSlots[slotCode] = distinctFileIds([
       ...uploadedSlotIds(item, slotCode),
       ...uploaded.map((file) => Number(file.file_id))
-    ]
+    ])
     item.form_values.upload_slot_files = nextSlots
     await saveItem(item, true)
     ElMessage.success(`${uploaded.length} 个专属文件已上传`)
@@ -1476,10 +1541,10 @@ async function uploadSharedFiles(event: Event) {
     group.value = await api<CaseGroup>(`/order-case-groups/${group.value.group_id}/shared-files`, {
       method: 'PUT',
       body: JSON.stringify({
-        file_ids: [
+        file_ids: distinctFileIds([
           ...(group.value.shared_file_ids ?? []),
           ...sharedFiles.value.map((file) => Number(file.file_id))
-        ],
+        ]),
         expected_draft_version: group.value.draft_version
       })
     })
@@ -1488,6 +1553,74 @@ async function uploadSharedFiles(event: Event) {
     ElMessage.error(cause instanceof Error ? cause.message : '共享文件上传失败')
   } finally {
     fileUploading.value = false
+  }
+}
+
+async function removeProductFile(item: CaseGroupItem, file: DoctorFile) {
+  if (!group.value || busy.value || fileUploading.value) return
+  const fileId = Number(file.file_id)
+  if (!Number.isSafeInteger(fileId) || fileId <= 0) return
+  busy.value = true
+  try {
+    await ElMessageBox.confirm(`移除“${file.name}”？该附件将停止访问，但审计记录会保留。`, '移除专属附件', {
+      confirmButtonText: '确认移除',
+      cancelButtonText: '取消',
+      type: 'warning'
+    })
+    const previousSlots = item.form_values.upload_slot_files
+    const nextSlots = previousSlots && typeof previousSlots === 'object' && !Array.isArray(previousSlots)
+      ? Object.fromEntries(Object.entries(previousSlots as Record<string, unknown>).map(([slot, ids]) => [
+          slot,
+          Array.isArray(ids) ? distinctFileIds(ids.map(Number)).filter((id) => id !== fileId) : ids
+        ]))
+      : previousSlots
+    item.form_values.upload_slot_files = nextSlots
+    const saved = await saveItem(item, true, itemSelectedFileIds(item).filter((id) => id !== fileId))
+    if (!saved) {
+      item.form_values.upload_slot_files = previousSlots
+      return
+    }
+    itemFiles[item.order_id] = (itemFiles[item.order_id] ?? []).filter((candidate) => Number(candidate.file_id) !== fileId)
+    ElMessage.success('专属附件已移除')
+  } catch (cause) {
+    if (cause !== 'cancel' && cause !== 'close') {
+      ElMessage.error(cause instanceof Error ? cause.message : '移除附件失败')
+    }
+  } finally {
+    busy.value = false
+  }
+}
+
+async function removeSharedFile(file: DoctorFile) {
+  if (!group.value || busy.value || fileUploading.value) return
+  const fileId = Number(file.file_id)
+  if (!Number.isSafeInteger(fileId) || fileId <= 0) return
+  busy.value = true
+  try {
+    await ElMessageBox.confirm(`移除“${file.name}”？该附件将停止访问，但审计记录会保留。`, '移除共享附件', {
+      confirmButtonText: '确认移除',
+      cancelButtonText: '取消',
+      type: 'warning'
+    })
+    const remainingIds = distinctFileIds([
+      ...(group.value.shared_file_ids ?? []),
+      ...sharedFiles.value.map((candidate) => candidate.file_id)
+    ]).filter((id) => id !== fileId)
+    group.value = await api<CaseGroup>(`/order-case-groups/${group.value.group_id}/shared-files`, {
+      method: 'PUT',
+      body: JSON.stringify({
+        file_ids: remainingIds,
+        expected_draft_version: group.value.draft_version
+      })
+    })
+    sharedFiles.value = sharedFiles.value.filter((candidate) => Number(candidate.file_id) !== fileId)
+    ElMessage.success('共享附件已移除')
+  } catch (cause) {
+    if (cause !== 'cancel' && cause !== 'close') {
+      ElMessage.error(cause instanceof Error ? cause.message : '移除附件失败')
+    }
+  } finally {
+    busy.value = false
   }
 }
 
@@ -2094,7 +2227,11 @@ onMounted(async () => {
         <section class="case-upload-card shared">
           <header><div><strong>病例共享资料</strong><small>同一病例多个产品共用的影像可只上传一次</small></div><span>{{ sharedFiles.length }} 个</span></header>
           <label><input type="file" multiple :disabled="fileUploading || !group?.items.length" @change="uploadSharedFiles"><b>＋ 上传共享资料</b><small>共享资料仍需在下方相应资料槽位中完成分类</small></label>
-          <article v-for="file in sharedFiles" :key="file.file_id"><strong>{{ file.name }}</strong><small>{{ file.size_label }}</small></article>
+          <article v-for="file in sharedFiles" :key="file.file_id">
+            <strong>{{ file.name }}</strong>
+            <small>{{ file.size_label }}</small>
+            <button type="button" class="case-file-remove" :disabled="busy || fileUploading" @click="removeSharedFile(file)">移除</button>
+          </article>
         </section>
         <div class="case-config-layout upload-layout">
           <aside class="case-item-tabs">
@@ -2110,6 +2247,12 @@ onMounted(async () => {
                 <span>{{ uploadedSlotIds(activeItem, rule.code).length ? `已上传 ${uploadedSlotIds(activeItem, rule.code).length} 个` : '尚未上传' }}</span>
                 <b>＋ 选择文件<input type="file" multiple :accept="rule.accept" :disabled="fileUploading" @change="uploadProductFiles($event, activeItem, rule.code)"></b>
               </label>
+            </div>
+            <div v-if="itemFiles[activeItem.order_id]?.length" class="case-uploaded-files">
+              <article v-for="file in itemFiles[activeItem.order_id]" :key="file.file_id">
+                <div><strong>{{ file.name }}</strong><small>{{ file.size_label }}</small></div>
+                <button type="button" class="case-file-remove" :disabled="busy || fileUploading" @click="removeProductFile(activeItem, file)">移除</button>
+              </article>
             </div>
           </section>
         </div>
@@ -3041,6 +3184,54 @@ onMounted(async () => {
 .case-upload-card > label:hover {
   border-color: var(--case-blue-400);
   background: var(--case-blue-100);
+}
+
+.case-upload-card > article {
+  align-items: center;
+  gap: 10px;
+}
+
+.case-upload-card > article strong {
+  min-width: 0;
+  flex: 1;
+  overflow-wrap: anywhere;
+}
+
+.case-uploaded-files {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.case-uploaded-files article {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--case-border);
+  border-radius: 8px;
+  background: var(--case-off);
+}
+
+.case-uploaded-files article strong,
+.case-uploaded-files article small {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
+.case-uploaded-files article small {
+  margin-top: 3px;
+  color: var(--case-muted);
+}
+
+.case-file-remove {
+  flex: 0 0 auto;
+  border: 1px solid #fecaca;
+  border-radius: 7px;
+  padding: 6px 10px;
+  color: #b42318;
+  background: #fff7f7;
 }
 
 .case-process-option,

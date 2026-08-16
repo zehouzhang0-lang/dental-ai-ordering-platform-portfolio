@@ -9,12 +9,18 @@ import com.yuri.aiorder.common.auth.RefreshTokenService;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseCookie;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -27,8 +33,10 @@ import org.springframework.web.server.ResponseStatusException;
 
 @RestController
 @RequestMapping("/api/auth")
-@CrossOrigin(origins = "${app.cors.allowed-origin:http://localhost:5173,http://127.0.0.1:5173}")
+@CrossOrigin(origins = "${app.cors.allowed-origin:http://localhost:5173,http://127.0.0.1:5173}", allowCredentials = "true")
 public class BootstrapAuthController {
+
+    private static final String REFRESH_COOKIE_NAME = "AI_ORDER_REFRESH";
 
     private final BearerTokenService tokenService;
     private final DatabaseAuthService databaseAuthService;
@@ -44,24 +52,103 @@ public class BootstrapAuthController {
     }
 
     @PostMapping("/login")
-    public LoginResponse login(@Valid @RequestBody LoginRequest request) {
+    public ResponseEntity<LoginResponse> login(
+            @Valid @RequestBody LoginRequest request,
+            HttpServletRequest httpRequest) {
         AuthenticatedUser authenticatedUser = databaseAuthService.authenticate(request.username(), request.password());
         requirePortalRole(request.portal(), authenticatedUser.roles());
         RefreshTokenService.IssuedRefreshToken refreshToken = refreshTokenService.issue(authenticatedUser.userId());
-        return loginResponse(authenticatedUser, refreshToken.token(), refreshToken.expiresAt());
+        return responseWithRefreshCookie(
+                loginResponse(authenticatedUser, refreshToken.token(), refreshToken.expiresAt()),
+                refreshToken.token(),
+                refreshToken.expiresAt(),
+                httpRequest);
     }
 
     @PostMapping("/refresh")
-    public LoginResponse refresh(@Valid @RequestBody RefreshTokenRequest request) {
+    public ResponseEntity<LoginResponse> refresh(
+            @Valid @RequestBody(required = false) RefreshTokenRequest request,
+            @CookieValue(name = REFRESH_COOKIE_NAME, required = false) String cookieRefreshToken,
+            HttpServletRequest httpRequest) {
+        String requestedRefreshToken = resolveRefreshToken(request, cookieRefreshToken);
         RefreshTokenService.IssuedRefreshToken refreshToken =
-                refreshTokenService.rotate(request.refreshToken());
+                refreshTokenService.rotate(requestedRefreshToken);
         AuthenticatedUser authenticatedUser = databaseAuthService.loadAuthenticatedUser(refreshToken.userId());
-        return loginResponse(authenticatedUser, refreshToken.token(), refreshToken.expiresAt());
+        return responseWithRefreshCookie(
+                loginResponse(authenticatedUser, refreshToken.token(), refreshToken.expiresAt()),
+                refreshToken.token(),
+                refreshToken.expiresAt(),
+                httpRequest);
     }
 
     @PostMapping("/logout")
-    public void logout(@Valid @RequestBody RefreshTokenRequest request) {
-        refreshTokenService.revoke(request.refreshToken());
+    public ResponseEntity<Void> logout(
+            @Valid @RequestBody(required = false) RefreshTokenRequest request,
+            @CookieValue(name = REFRESH_COOKIE_NAME, required = false) String cookieRefreshToken,
+            HttpServletRequest httpRequest) {
+        String requestedRefreshToken = optionalRefreshToken(request, cookieRefreshToken);
+        if (requestedRefreshToken != null) {
+            refreshTokenService.revoke(requestedRefreshToken);
+        }
+        return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, clearRefreshCookie(httpRequest).toString())
+                .build();
+    }
+
+    private ResponseEntity<LoginResponse> responseWithRefreshCookie(
+            LoginResponse response,
+            String refreshToken,
+            Instant refreshExpiresAt,
+            HttpServletRequest httpRequest) {
+        Duration maxAge = Duration.between(Instant.now(), refreshExpiresAt);
+        if (maxAge.isNegative()) {
+            maxAge = Duration.ZERO;
+        }
+        ResponseCookie cookie = refreshCookie(refreshToken, maxAge, httpRequest);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, cookie.toString())
+                .body(response);
+    }
+
+    private String resolveRefreshToken(RefreshTokenRequest request, String cookieRefreshToken) {
+        String refreshToken = optionalRefreshToken(request, cookieRefreshToken);
+        if (refreshToken == null) {
+            throw new UnauthorizedException();
+        }
+        return refreshToken;
+    }
+
+    private String optionalRefreshToken(RefreshTokenRequest request, String cookieRefreshToken) {
+        if (request != null && request.refreshToken() != null && !request.refreshToken().isBlank()) {
+            return request.refreshToken();
+        }
+        if (cookieRefreshToken != null && !cookieRefreshToken.isBlank()) {
+            return cookieRefreshToken;
+        }
+        return null;
+    }
+
+    private ResponseCookie refreshCookie(String value, Duration maxAge, HttpServletRequest httpRequest) {
+        return ResponseCookie.from(REFRESH_COOKIE_NAME, value)
+                .httpOnly(true)
+                .secure(isSecureRequest(httpRequest))
+                .sameSite("Strict")
+                .path("/api/auth")
+                .maxAge(maxAge)
+                .build();
+    }
+
+    private ResponseCookie clearRefreshCookie(HttpServletRequest httpRequest) {
+        return refreshCookie("", Duration.ZERO, httpRequest);
+    }
+
+    private boolean isSecureRequest(HttpServletRequest request) {
+        if (request.isSecure()) {
+            return true;
+        }
+        String forwardedProto = request.getHeader("X-Forwarded-Proto");
+        return forwardedProto != null
+                && forwardedProto.split(",", 2)[0].trim().equalsIgnoreCase("https");
     }
 
     private LoginResponse loginResponse(AuthenticatedUser authenticatedUser, String refreshToken, Instant refreshExpiresAt) {

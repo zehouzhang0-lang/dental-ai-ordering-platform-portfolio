@@ -37,8 +37,8 @@ AI tools assisted the work but did not own business or acceptance decisions.
 
 ## Verification coordinate
 
-The review snapshot is pinned to `main@e465d8d8d13b30c2e6d265fea3e3f82e55b2e9ec`.
-GitHub Actions run `31937188201` recorded 348 backend tests with zero failures,
+The review snapshot is pinned to `main@54eea0e4399782485d7953231e4768ed684cd097`.
+GitHub Actions run `31939878141` recorded 350 backend tests with zero failures,
 frontend/release gates, immutable image construction, deployment, and public
 login/CORS redirect probes. The evidence is version-specific and does not imply
 complete customer acceptance.
