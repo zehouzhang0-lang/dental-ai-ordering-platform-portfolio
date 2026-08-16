@@ -1,0 +1,6 @@
+app:
+  auth:
+    # APP_AUTH_TOKEN_SECRET must be injected externally in prod. Do not add a local fallback here.
+    token-secret: ${APP_AUTH_TOKEN_SECRET}
+    allow-bootstrap-headers: false
+    allow-role-fallback: false

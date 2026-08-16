@@ -1,0 +1,20 @@
+CREATE TABLE production_safety_event (
+    event_id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    event_no VARCHAR(64) NOT NULL,
+    event_type VARCHAR(32) NOT NULL,
+    status VARCHAR(32) NOT NULL DEFAULT 'PENDING',
+    department_name VARCHAR(128) NULL,
+    responsible_owner VARCHAR(128) NULL,
+    equipment_code VARCHAR(64) NULL,
+    risk_level VARCHAR(32) NOT NULL DEFAULT 'NORMAL',
+    due_at DATETIME(3) NULL,
+    description VARCHAR(512) NULL,
+    created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    updated_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
+    closed_at DATETIME(3) NULL,
+    UNIQUE KEY uk_safety_event_no (event_no),
+    KEY idx_safety_event_type_status (event_type, status),
+    KEY idx_safety_event_due (due_at),
+    KEY idx_safety_event_department (department_name),
+    KEY idx_safety_event_risk (risk_level)
+);

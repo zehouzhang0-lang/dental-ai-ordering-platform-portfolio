@@ -1,0 +1,11 @@
+.git
+.github
+.env
+node_modules
+frontend/node_modules
+frontend/dist
+**/target
+!backend/platform-server/target/
+!backend/platform-server/target/platform-server-0.1.0-SNAPSHOT.jar
+docs
+*.log

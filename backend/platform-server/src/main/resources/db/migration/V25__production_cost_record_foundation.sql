@@ -1,0 +1,21 @@
+CREATE TABLE production_cost_record (
+    cost_id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    cost_no VARCHAR(64) NOT NULL,
+    order_id BIGINT NULL,
+    node_instance_id BIGINT NULL,
+    cost_type VARCHAR(32) NOT NULL,
+    amount DECIMAL(12, 2) NOT NULL DEFAULT 0.00,
+    status VARCHAR(32) NOT NULL DEFAULT 'NORMAL',
+    department_name VARCHAR(128) NULL,
+    supplier_name VARCHAR(128) NULL,
+    description VARCHAR(512) NULL,
+    created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    updated_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
+    confirmed_at DATETIME(3) NULL,
+    UNIQUE KEY uk_cost_record_no (cost_no),
+    KEY idx_cost_record_type_status (cost_type, status),
+    KEY idx_cost_record_order (order_id),
+    KEY idx_cost_record_node (node_instance_id),
+    KEY idx_cost_record_department (department_name),
+    KEY idx_cost_record_supplier (supplier_name)
+);

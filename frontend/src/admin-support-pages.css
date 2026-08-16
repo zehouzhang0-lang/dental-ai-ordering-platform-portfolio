@@ -1,0 +1,49 @@
+.arp-row-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.arp-row-actions button {
+  height: 27px;
+  padding: 0 8px;
+  border: 1px solid #bfdbfe;
+  border-radius: 7px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  cursor: pointer;
+}
+
+.arp-row-actions button.danger {
+  border-color: #fecdd3;
+  background: #fff1f2;
+  color: #be123c;
+}
+
+.arp-row-actions button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.arp-support-drawer-layer {
+  z-index: 5100;
+}
+
+.arp-metric-table > .arp-table-scroll {
+  height: calc(100% - 88px);
+}
+
+.arp-metric-table .arp-wide {
+  min-width: 1160px;
+}
+
+.arp-metric-table .arp-empty-large {
+  min-height: 240px;
+}
+
+@media (max-width: 1280px) {
+  .arp-metric-table .arp-wide {
+    min-width: 1080px;
+  }
+}

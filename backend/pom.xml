@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>3.5.0</version>
+        <relativePath/>
+    </parent>
+
+    <groupId>com.yuri.aiorder</groupId>
+    <artifactId>ai-order-platform-backend</artifactId>
+    <version>0.1.0-SNAPSHOT</version>
+    <packaging>pom</packaging>
+
+    <name>AI Order Platform Backend</name>
+    <description>Modular monolith skeleton for the AI intelligent dental order platform.</description>
+
+    <modules>
+        <module>platform-common</module>
+        <module>ruoyi-runtime-bridge</module>
+        <module>system-auth</module>
+        <module>clinic-user</module>
+        <module>order-form</module>
+        <module>order-status</module>
+        <module>workflow-definition</module>
+        <module>workflow-runtime</module>
+        <module>check-rework</module>
+        <module>worklog-performance</module>
+        <module>file-center</module>
+        <module>message-design</module>
+        <module>bill-logistics</module>
+        <module>ai-gateway</module>
+        <module>notification-ws</module>
+        <module>platform-server</module>
+    </modules>
+
+    <properties>
+        <java.version>21</java.version>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    </properties>
+</project>

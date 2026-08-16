@@ -1,0 +1,10 @@
+repository=https://github.com/YunaiV/ruoyi-vue-pro
+branch=master-jdk17
+commit=ec3f7cbf73e88514a70a6b59d365092ee470603d
+commit_date=2026-06-30T00:19:06Z
+archive_url=https://codeload.github.com/YunaiV/ruoyi-vue-pro/tar.gz/ec3f7cbf73e88514a70a6b59d365092ee470603d
+archive_sha256=d8deecbdc42f7680e17a072460bfee6213b25e9f3605c1b56bc182a5d9cc98e8
+license=MIT
+upstream_version=2026.06-SNAPSHOT
+java_target=17
+spring_boot_version=3.5.15

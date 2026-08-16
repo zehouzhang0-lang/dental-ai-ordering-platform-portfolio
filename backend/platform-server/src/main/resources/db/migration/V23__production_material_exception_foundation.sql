@@ -1,0 +1,21 @@
+CREATE TABLE production_material_exception (
+    exception_id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    exception_no VARCHAR(64) NOT NULL,
+    material_code VARCHAR(64) NOT NULL,
+    material_name VARCHAR(128) NOT NULL,
+    order_id BIGINT NULL,
+    node_instance_id BIGINT NULL,
+    exception_type VARCHAR(32) NOT NULL,
+    status VARCHAR(32) NOT NULL DEFAULT 'PENDING',
+    responsibility_owner VARCHAR(128) NULL,
+    loss_quantity DECIMAL(12, 2) NOT NULL DEFAULT 0.00,
+    description VARCHAR(512) NULL,
+    created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    updated_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
+    closed_at DATETIME(3) NULL,
+    UNIQUE KEY uk_material_exception_no (exception_no),
+    KEY idx_material_exception_type_status (exception_type, status),
+    KEY idx_material_exception_material (material_code),
+    KEY idx_material_exception_order (order_id),
+    KEY idx_material_exception_responsibility (responsibility_owner)
+);

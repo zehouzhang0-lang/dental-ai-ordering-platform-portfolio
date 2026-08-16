@@ -1,0 +1,19 @@
+{
+  "name": "dental-ai-ordering-platform-portfolio",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@11.7.0",
+  "scripts": {
+    "dev:frontend": "pnpm --filter ai-order-platform-frontend dev",
+    "build:frontend": "pnpm --filter ai-order-platform-frontend build",
+    "build:backend": "bash scripts/with-jdk21.sh ./mvnw -f backend/pom.xml -pl platform-server -am -DskipTests package",
+    "test:backend": "bash scripts/with-jdk21.sh ./mvnw -f backend/pom.xml test",
+    "test:infra": "bash scripts/ensure-test-database.sh",
+    "compose:up": "docker compose up -d --wait mysql redis minio",
+    "compose:down": "docker compose down",
+    "compose:config": "docker compose config",
+    "security:scan": "node scripts/security-scan.mjs",
+    "verify": "pnpm security:scan && pnpm build:frontend"
+  }
+}

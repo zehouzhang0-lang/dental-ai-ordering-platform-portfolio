@@ -1,0 +1,417 @@
+.arp-ai-card {
+  height: auto;
+  min-height: 0;
+  padding: 16px;
+  background: linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
+  border-color: #e4eaf2;
+  box-shadow: 0 8px 28px rgba(30, 64, 175, 0.04);
+}
+
+.arp-ai-metrics {
+  border-color: #dbe7fb;
+  background: linear-gradient(105deg, #f3f7ff 0%, #ffffff 76%);
+}
+
+.arp-ai-metrics article {
+  position: relative;
+  padding-left: 16px;
+}
+
+.arp-ai-metrics article::before {
+  position: absolute;
+  top: 14px;
+  bottom: 14px;
+  left: 0;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: #3b82f6;
+  content: "";
+  opacity: 0.72;
+}
+
+.arp-ai-metrics article:nth-child(2)::before { background: #06b6d4; }
+.arp-ai-metrics article:nth-child(3)::before { background: #f59e0b; }
+.arp-ai-metrics article:nth-child(4)::before { background: #8b5cf6; }
+
+.arp-ai-metrics strong,
+.arp-trend-summary strong,
+.arp-risk-grid b,
+.arp-budget strong,
+.arp-budget-meta b {
+  font-variant-numeric: tabular-nums;
+}
+
+.arp-ai-grid {
+  height: 340px;
+  margin-top: 14px;
+  grid-template-columns: minmax(0, 1.72fr) minmax(300px, 0.78fr);
+  gap: 14px;
+  align-items: stretch;
+}
+
+.arp-trend-card,
+.arp-ai-side > section {
+  border: 1px solid #e4eaf2;
+  border-radius: 12px;
+  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.025);
+}
+
+.arp-trend-card {
+  height: 340px;
+  min-width: 0;
+  min-height: 0;
+  box-sizing: border-box;
+  grid-template-rows: 58px 224px 58px;
+}
+
+.arp-ai-side {
+  height: 340px;
+  min-height: 0;
+  box-sizing: border-box;
+}
+
+.arp-trend-card .arp-trend-header {
+  height: 58px;
+  padding: 0 16px;
+  background: linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
+}
+
+.arp-trend-title,
+.arp-trend-title > div,
+.arp-trend-meta {
+  display: flex;
+  align-items: center;
+}
+
+.arp-trend-title {
+  min-width: 0;
+  gap: 10px;
+}
+
+.arp-trend-title > div {
+  align-items: flex-start;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.arp-trend-title strong {
+  color: #172033;
+  font-size: 13px;
+}
+
+.arp-trend-title small {
+  color: #94a3b8;
+  font-size: 9px;
+}
+
+.arp-icon-chip {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  border: 1px solid #2563eb;
+  border-radius: 9px;
+  background: #2563eb;
+  box-shadow: 0 4px 10px rgba(37, 99, 235, 0.16);
+  color: #ffffff;
+}
+
+.arp-icon-chip svg,
+.arp-risk-grid svg {
+  width: 17px;
+  height: 17px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.arp-trend-meta {
+  justify-content: flex-end;
+  gap: 12px;
+  color: #94a3b8;
+  font-size: 9px;
+  white-space: nowrap;
+}
+
+.arp-trend-meta i {
+  position: relative;
+  padding-left: 18px;
+  color: #64748b;
+  font-style: normal;
+}
+
+.arp-trend-meta i::before {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 12px;
+  height: 2px;
+  border-radius: 2px;
+  background: #2563eb;
+  content: "";
+  transform: translateY(-50%);
+}
+
+.arp-trend-meta .arp-legend-cost::before {
+  height: 0;
+  border-top: 2px dashed #f59e0b;
+  background: transparent;
+}
+
+.arp-trend-plot {
+  position: relative;
+  min-height: 0;
+  overflow: hidden;
+  background: linear-gradient(180deg, #ffffff 0%, #fcfdff 100%);
+}
+
+.arp-trend-plot > svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+  padding: 0;
+}
+
+.arp-grid-line {
+  stroke: #e8edf5;
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.arp-call-area { fill: url(#arp-ai-area); }
+
+.arp-call-line,
+.arp-cost-line,
+.arp-hover-line {
+  fill: none;
+  vector-effect: non-scaling-stroke;
+}
+
+.arp-call-line {
+  stroke: #2563eb;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  animation: arp-line-in 420ms ease-out both;
+}
+
+.arp-cost-line {
+  stroke: #f59e0b;
+  stroke-width: 1.8;
+  stroke-dasharray: 5 5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  animation: arp-line-in 480ms ease-out both;
+}
+
+@keyframes arp-line-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.arp-hover-line {
+  stroke: #cbd5e1;
+  stroke-width: 1;
+  stroke-dasharray: 3 4;
+}
+
+.arp-active-dot,
+.arp-active-cost-dot {
+  vector-effect: non-scaling-stroke;
+}
+
+.arp-active-dot {
+  fill: #2563eb;
+  stroke: #ffffff;
+  stroke-width: 2.5;
+  filter: drop-shadow(0 2px 3px rgba(37, 99, 235, 0.25));
+}
+
+.arp-active-cost-dot {
+  fill: #ffffff;
+  stroke: #f59e0b;
+  stroke-width: 2;
+}
+
+.arp-hover-zone {
+  fill: transparent;
+  cursor: crosshair;
+  outline: none;
+}
+
+.arp-axis-label {
+  fill: #94a3b8;
+  font-size: 9px;
+  font-variant-numeric: tabular-nums;
+}
+
+.arp-chart-tooltip rect {
+  fill: rgba(15, 23, 42, 0.92);
+  filter: drop-shadow(0 5px 8px rgba(15, 23, 42, 0.16));
+}
+
+.arp-chart-tooltip text {
+  fill: #ffffff;
+  font-size: 8px;
+  font-variant-numeric: tabular-nums;
+}
+
+.arp-chart-tooltip text:last-child { fill: #cbd5e1; }
+
+.arp-chart-empty {
+  position: absolute;
+  inset: 48px 0 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  pointer-events: none;
+  color: #64748b;
+}
+
+.arp-chart-empty span { font-weight: 700; }
+.arp-chart-empty small { margin-top: 4px; color: #94a3b8; }
+
+.arp-trend-card .arp-trend-summary {
+  height: 58px;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  border-top: 1px solid #eef2f7;
+  background: #fbfdff;
+}
+
+.arp-trend-summary article {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  flex-direction: column;
+  padding: 0 16px;
+  border-right: 1px solid #eef2f7;
+}
+
+.arp-trend-summary article:last-child { border-right: 0; }
+.arp-trend-summary span { color: #94a3b8; font-size: 9px; }
+.arp-trend-summary strong { margin-top: 3px; color: #334155; font-size: 12px; }
+
+.arp-ai-side {
+  grid-template-rows: 1fr 1fr;
+  gap: 14px;
+}
+
+.arp-ai-side > section {
+  min-height: 0;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.arp-ai-side > section > header {
+  height: 44px;
+  padding: 0 14px;
+  background: #fbfdff;
+}
+
+.arp-ai-side > section > header strong { color: #172033; font-size: 12px; }
+.arp-ai-side > section > header span { font-size: 9px; }
+.arp-ai-side > section > header span.danger { color: #dc2626; }
+
+.arp-risk-grid {
+  height: calc(100% - 44px);
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.arp-risk-grid article {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 7px;
+  padding: 0 10px;
+  border-right: 1px solid #eef2f7;
+  border-bottom: 1px solid #eef2f7;
+}
+
+.arp-risk-grid article:nth-child(2n) { border-right: 0; }
+.arp-risk-grid article:nth-last-child(-n + 2) { border-bottom: 0; }
+
+.arp-risk-grid article > i {
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  background: #eff6ff;
+  color: #2563eb;
+  font-style: normal;
+}
+
+.arp-risk-grid article > i.cyan { background: #ecfeff; color: #0891b2; }
+.arp-risk-grid article > i.orange { background: #fff7ed; color: #ea580c; }
+.arp-risk-grid article > i.violet { background: #f5f3ff; color: #7c3aed; }
+.arp-risk-grid span { min-width: 0; color: #64748b; font-size: 9px; white-space: nowrap; }
+.arp-risk-grid b { color: #1d4ed8; font-size: 12px; }
+
+.arp-budget {
+  height: calc(100% - 44px);
+  padding: 14px;
+  box-sizing: border-box;
+}
+
+.arp-budget > span,
+.arp-budget > small { color: #94a3b8; font-size: 9px; }
+
+.arp-budget > strong {
+  margin: 4px 0 9px;
+  color: #1d4ed8;
+  font-size: 22px;
+  letter-spacing: -0.35px;
+}
+
+.arp-budget-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+  color: #64748b;
+  font-size: 9px;
+}
+
+.arp-budget-meta b { color: #334155; font-size: 9px; }
+
+.arp-budget .arp-progress {
+  width: 100%;
+  height: 6px;
+  margin-bottom: 7px;
+  background: #edf2f9;
+}
+
+.arp-budget .arp-progress i {
+  background: linear-gradient(90deg, #60a5fa, #2563eb);
+  transition: width 420ms ease-out;
+}
+
+@media (max-width: 1280px) {
+  .arp-ai-grid {
+    height: 326px;
+    grid-template-columns: minmax(0, 1.62fr) minmax(292px, 0.78fr);
+    gap: 12px;
+  }
+
+  .arp-trend-card { grid-template-rows: 56px 216px 54px; }
+  .arp-trend-card,
+  .arp-ai-side { height: 326px; }
+  .arp-trend-card .arp-trend-header { height: 56px; padding: 0 12px; }
+  .arp-trend-meta { gap: 8px; }
+  .arp-trend-summary article { padding: 0 12px; }
+  .arp-risk-grid article { grid-template-columns: 26px minmax(0, 1fr) auto; gap: 5px; padding: 0 8px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .arp-call-line,
+  .arp-cost-line,
+  .arp-budget .arp-progress i { animation: none; transition: none; }
+}
