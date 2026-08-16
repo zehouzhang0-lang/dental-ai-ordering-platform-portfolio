@@ -32,15 +32,16 @@ attachments, or completion of every manual acceptance scenario.
 
 ## Suggested review path
 
-1. [`docs/PROJECT_REVIEW_BRIEF.md`](docs/PROJECT_REVIEW_BRIEF.md)
-2. [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
-3. [`docs/EVIDENCE_AND_CLAIMS.md`](docs/EVIDENCE_AND_CLAIMS.md)
-4. [`docs/VERIFICATION.md`](docs/VERIFICATION.md)
-5. `frontend/src/doctor/DoctorCaseGroupWizard.vue`
-6. `backend/platform-server/src/main/java/com/yuri/aiorder/order/casegroup/`
-7. `backend/platform-server/src/main/java/com/yuri/aiorder/workflow/`
-8. `backend/platform-server/src/main/java/com/yuri/aiorder/ai/`
-9. `backend/platform-server/src/test/java/com/yuri/aiorder/`
+1. [`docs/TEACHER_BRIEF_ZH.md`](docs/TEACHER_BRIEF_ZH.md)（中文审阅入口）
+2. [`docs/PROJECT_REVIEW_BRIEF.md`](docs/PROJECT_REVIEW_BRIEF.md)
+3. [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
+4. [`docs/EVIDENCE_AND_CLAIMS.md`](docs/EVIDENCE_AND_CLAIMS.md)
+5. [`docs/VERIFICATION.md`](docs/VERIFICATION.md)
+6. `frontend/src/doctor/DoctorCaseGroupWizard.vue`
+7. `backend/platform-server/src/main/java/com/yuri/aiorder/order/casegroup/`
+8. `backend/platform-server/src/main/java/com/yuri/aiorder/workflow/`
+9. `backend/platform-server/src/main/java/com/yuri/aiorder/ai/`
+10. `backend/platform-server/src/test/java/com/yuri/aiorder/`
 
 ## Local verification
 
