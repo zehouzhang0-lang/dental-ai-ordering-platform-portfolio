@@ -21,6 +21,12 @@ ports, a test-only database, synthetic accounts, and deterministic AI fallback.
 It did not contact the historical production database, object store, or model
 provider.
 
+The business day is defined in `Asia/Shanghai`. Backend verification therefore
+sets both `TZ=Asia/Shanghai` and
+`JAVA_TOOL_OPTIONS=-Duser.timezone=Asia/Shanghai`, matching the database and
+container configuration. This prevents UTC runner midnight from shifting
+date-range assertions by one business day.
+
 The frontend build emitted Vite's advisory for large output chunks. That does
 not fail the build, but bundle splitting and performance measurement remain
 future work.

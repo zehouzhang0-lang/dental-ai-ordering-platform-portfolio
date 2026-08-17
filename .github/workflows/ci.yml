@@ -1,4 +1,4 @@
-name: Validate private portfolio archive
+name: Validate sanitized portfolio archive
 
 on:
   push:
@@ -41,6 +41,9 @@ jobs:
           bash scripts/ensure-test-database.sh
 
       - name: Run backend tests
+        env:
+          TZ: Asia/Shanghai
+          JAVA_TOOL_OPTIONS: -Duser.timezone=Asia/Shanghai
         run: bash scripts/with-jdk21.sh ./mvnw -f backend/pom.xml test
 
       - name: Build frontend

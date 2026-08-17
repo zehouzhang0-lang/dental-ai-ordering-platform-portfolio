@@ -33,7 +33,7 @@
 - 本安全归档保留了可构建的 Vue 3/TypeScript/Vite 前端与 Java 21/Spring Boot 后端；
 - 本地隔离环境实跑后端测试：**350 通过，0 失败，0 错误，0 跳过**；
 - 前端生产构建、前后端容器镜像构建及 Docker Compose 健康检查均通过；
-- 源发布流水线与本归档 GitHub Actions 均完成安全/发布门禁、隔离基础设施、350 项后端测试和前端构建；
+- 源发布流水线完成安全/发布门禁、隔离基础设施、350 项后端测试和前端构建；本归档另在显式使用 `Asia/Shanghai` 业务时区的隔离环境中复跑 350 项测试与前端构建；
 - `docs/api/openapi.yaml` 保留接口契约，源码中保留角色权限、状态投影、文件授权、幂等与乐观锁实现。
 
 详见 [`VERIFICATION.md`](VERIFICATION.md)、[`EVIDENCE_AND_CLAIMS.md`](EVIDENCE_AND_CLAIMS.md) 与 [`ARCHITECTURE.md`](ARCHITECTURE.md)。

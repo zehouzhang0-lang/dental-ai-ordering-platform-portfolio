@@ -1,6 +1,6 @@
 # AI-assisted dental ordering and production collaboration platform
 
-> Private, sanitized portfolio source archive for authorized review.
+> Public, sanitized portfolio source snapshot for academic and professional review.
 
 This project models the end-to-end collaboration between dental clinics and a
 dental laboratory. A single Vue application exposes four permission-separated
@@ -55,8 +55,9 @@ pnpm install --frozen-lockfile
 pnpm security:scan
 docker compose up -d --wait mysql redis minio
 bash scripts/ensure-test-database.sh
-pnpm test:backend
+TZ=Asia/Shanghai JAVA_TOOL_OPTIONS=-Duser.timezone=Asia/Shanghai pnpm test:backend
 pnpm build:frontend
+docker compose down -v
 ```
 
 The included Maven Wrapper downloads the pinned Maven distribution on first
@@ -90,5 +91,5 @@ recordings, signed URLs, database dumps, deployment secrets, local virtual
 environments, generated artifacts, and internal agent profiles.
 
 See [`SOURCE_PROVENANCE.md`](SOURCE_PROVENANCE.md),
-[`PRIVATE_REVIEW_NOTICE.md`](PRIVATE_REVIEW_NOTICE.md), and
+[`PUBLIC_PORTFOLIO_NOTICE.md`](PUBLIC_PORTFOLIO_NOTICE.md), and
 [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md).
