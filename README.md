@@ -55,7 +55,7 @@ pnpm install --frozen-lockfile
 pnpm security:scan
 docker compose up -d --wait mysql redis minio
 bash scripts/ensure-test-database.sh
-TZ=Asia/Shanghai JAVA_TOOL_OPTIONS=-Duser.timezone=Asia/Shanghai pnpm test:backend
+TZ=Asia/Shanghai bash scripts/with-jdk21.sh ./mvnw -Duser.timezone=Asia/Shanghai -f backend/pom.xml test
 pnpm build:frontend
 docker compose down -v
 ```

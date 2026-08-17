@@ -43,8 +43,7 @@ jobs:
       - name: Run backend tests
         env:
           TZ: Asia/Shanghai
-          JAVA_TOOL_OPTIONS: -Duser.timezone=Asia/Shanghai
-        run: bash scripts/with-jdk21.sh ./mvnw -f backend/pom.xml test
+        run: bash scripts/with-jdk21.sh ./mvnw -Duser.timezone=Asia/Shanghai -f backend/pom.xml test
 
       - name: Build frontend
         run: pnpm build:frontend
