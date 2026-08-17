@@ -17,6 +17,7 @@ import com.yuri.aiorder.common.BootstrapIdentity;
 import com.yuri.aiorder.common.UserRole;
 import com.yuri.aiorder.common.auth.BearerTokenService;
 import com.yuri.aiorder.common.auth.RefreshTokenService;
+import jakarta.servlet.http.Cookie;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.util.ArrayList;
@@ -424,6 +425,39 @@ class BearerIdentityTests {
         mockMvc.perform(post("/api/auth/refresh")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"refresh_token\":\"" + rotatedRefreshToken + "\"}"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void httpOnlyRefreshCookieRestoresSessionWithoutJavascriptTokenAndLogoutClearsIt() throws Exception {
+        MvcResult login = mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"username\":\"doctor\",\"password\":\"change-me-doctor\",\"portal\":\"DOCTOR\"}"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Set-Cookie", containsString("AI_ORDER_REFRESH=")))
+                .andExpect(header().string("Set-Cookie", containsString("HttpOnly")))
+                .andExpect(header().string("Set-Cookie", containsString("SameSite=Strict")))
+                .andReturn();
+        Cookie loginCookie = login.getResponse().getCookie("AI_ORDER_REFRESH");
+        org.assertj.core.api.Assertions.assertThat(loginCookie).isNotNull();
+
+        MvcResult refreshed = mockMvc.perform(post("/api/auth/refresh")
+                        .cookie(loginCookie))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.accessToken").isString())
+                .andExpect(jsonPath("$.roles", hasItem("DOCTOR")))
+                .andExpect(header().string("Set-Cookie", containsString("AI_ORDER_REFRESH=")))
+                .andReturn();
+        Cookie refreshedCookie = refreshed.getResponse().getCookie("AI_ORDER_REFRESH");
+        org.assertj.core.api.Assertions.assertThat(refreshedCookie).isNotNull();
+
+        mockMvc.perform(post("/api/auth/logout")
+                        .cookie(refreshedCookie))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Set-Cookie", containsString("Max-Age=0")));
+
+        mockMvc.perform(post("/api/auth/refresh")
+                        .cookie(refreshedCookie))
                 .andExpect(status().isUnauthorized());
     }
 

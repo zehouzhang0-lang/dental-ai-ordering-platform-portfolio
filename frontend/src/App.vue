@@ -1862,6 +1862,8 @@ const checkTasksLoading = ref(false)
 const checkActionLoading = ref(false)
 const checkError = ref('')
 const checkResult = ref<CheckRecordResponse | null>(null)
+let checkTasksRequestVersion = 0
+let checkSelectionVersion = 0
 const reworkRecords = ref<ReworkRecordResponse[]>([])
 const reworkStatus = ref('PENDING')
 const reworkOnlyImpacted = ref(false)
@@ -2183,6 +2185,13 @@ const portalToneByLoginPortal: Record<LoginPortal, PortalTone> = {
   PRODUCTION: 'production',
   ADMIN: 'admin'
 }
+const loginPortalRequiredRole: Record<LoginPortal, string> = {
+  DOCTOR: 'DOCTOR',
+  CS: 'CS',
+  PRODUCTION: 'WORKER',
+  ADMIN: 'ADMIN'
+}
+const rememberedLoginPortalKey = 'ai-order:last-login-portal'
 const portalOptions: PortalOption[] = [
   {
     value: 'DOCTOR',
@@ -5765,6 +5774,7 @@ function isLoginPortal(value: FormDataEntryValue | null): value is LoginPortal {
 async function requestLoginPayload(loginUsername: string, loginPassword: string, loginPortal: LoginPortal) {
   const response = await fetch('/api/auth/login', {
     method: 'POST',
+    credentials: 'same-origin',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ username: loginUsername, password: loginPassword, portal: loginPortal })
   })
@@ -5835,6 +5845,14 @@ function applyLoginSession(
   token.value = payload.accessToken
   refreshToken.value = payload.refreshToken
   currentUser.value = payload
+  if (loginPortal) {
+    selectedPortal.value = loginPortal
+    try {
+      window.localStorage.setItem(rememberedLoginPortalKey, loginPortal)
+    } catch {
+      // Session restoration still works when browser storage is unavailable.
+    }
+  }
   activePortalTone.value = loginPortal ? portalToneByLoginPortal[loginPortal] : activePortalTone.value
   activeRoute.value = nextRoute
   activePrototypeChip.value = ''
@@ -5849,6 +5867,40 @@ function applyLoginSession(
   void loadActiveRouteData().catch((error) => {
     phaseOneAbDashboardDataError.value = error instanceof Error ? error.message : '页面数据加载失败'
   })
+}
+
+function loginPortalForSession(payload: LoginResponse): LoginPortal | null {
+  let remembered: string | null = null
+  try {
+    remembered = window.localStorage.getItem(rememberedLoginPortalKey)
+  } catch {
+    remembered = null
+  }
+  if (isLoginPortal(remembered) && payload.roles.includes(loginPortalRequiredRole[remembered])) {
+    return remembered
+  }
+  return (Object.keys(loginPortalRequiredRole) as LoginPortal[])
+    .find((portal) => payload.roles.includes(loginPortalRequiredRole[portal])) ?? null
+}
+
+async function restoreLoginSessionFromCookie() {
+  if (token.value || logoutInProgress) return
+  const requestGeneration = authSessionGeneration
+  try {
+    const response = await fetch('/api/auth/refresh', {
+      method: 'POST',
+      credentials: 'same-origin'
+    })
+    if (!response.ok) return
+    const payload = await response.json() as LoginResponse
+    if (token.value || logoutInProgress || requestGeneration !== authSessionGeneration) return
+    const loginPortal = loginPortalForSession(payload)
+    if (!loginPortal) return
+    applyLoginSession(payload, portalRouteFor(payload, loginPortal), loginPortal)
+    connectNotificationSocket()
+  } catch {
+    // An absent or expired cookie is an ordinary signed-out state.
+  }
 }
 
 function defaultDisplayNavIdForRoute(routePath: string) {
@@ -6032,6 +6084,7 @@ async function refreshAccessTokenSingleFlight(): Promise<RefreshSessionResult> {
     try {
       const response = await fetch('/api/auth/refresh', {
         method: 'POST',
+        credentials: 'same-origin',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ refresh_token: tokenToRotate })
       })
@@ -6110,22 +6163,21 @@ async function logout() {
       () => refreshToken.value,
       logoutRefreshWaitTimeoutMs
     )
-    if (tokenToRevoke) {
-      const controller = new AbortController()
-      const timeoutId = window.setTimeout(() => controller.abort(), logoutRevokeTimeoutMs)
-      try {
-        const response = await fetch('/api/auth/logout', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ refresh_token: tokenToRevoke }),
-          signal: controller.signal
-        })
-        if (!response.ok) {
-          throw new Error(`退出登录失败：${response.status}`)
-        }
-      } finally {
-        window.clearTimeout(timeoutId)
+    const controller = new AbortController()
+    const timeoutId = window.setTimeout(() => controller.abort(), logoutRevokeTimeoutMs)
+    try {
+      const response = await fetch('/api/auth/logout', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: tokenToRevoke ? { 'Content-Type': 'application/json' } : undefined,
+        body: tokenToRevoke ? JSON.stringify({ refresh_token: tokenToRevoke }) : undefined,
+        signal: controller.signal
+      })
+      if (!response.ok) {
+        throw new Error(`退出登录失败：${response.status}`)
       }
+    } finally {
+      window.clearTimeout(timeoutId)
     }
   } catch (error) {
     loginError.value = error instanceof DOMException && error.name === 'AbortError'
@@ -6390,6 +6442,11 @@ function clearLoginSession() {
   activeRoute.value = '/dashboard'
   activeNavId.value = 'dashboard'
   activePrototypeChip.value = ''
+  try {
+    window.localStorage.removeItem(rememberedLoginPortalKey)
+  } catch {
+    // Ignore unavailable browser storage during local cleanup.
+  }
   unreadCount.value = 0
   notifications.value = []
   lastRealtimeNotification.value = null
@@ -9732,20 +9789,24 @@ async function locateCheckTask() {
     return
   }
   checkTaskStatus.value = ''
-  await loadCheckTasks()
+  const preferredNodeInstanceId = /^\d+$/.test(lookup) ? Number(lookup) : undefined
+  await loadCheckTasks(preferredNodeInstanceId)
   const task = checkTasks.value.find((item) =>
     item.order_no.toLowerCase().includes(lookup) || String(item.node_instance_id) === lookup)
   if (!task) {
     checkError.value = '未找到当前账号可执行的任务，请核对订单号或节点编号'
     return
   }
-  await selectCheckTask(task)
+  if (selectedCheckTask.value?.node_instance_id !== task.node_instance_id) {
+    await selectCheckTask(task)
+  }
 }
 
-async function loadCheckTasks() {
+async function loadCheckTasks(preferredNodeInstanceId?: number) {
   if (!token.value) {
     return
   }
+  const requestVersion = ++checkTasksRequestVersion
   checkTasksLoading.value = true
   checkError.value = ''
   checkResult.value = null
@@ -9756,44 +9817,65 @@ async function loadCheckTasks() {
     }
     const query = params.toString()
     const payload = await apiFetch<WorkerTaskItem[]>(query ? `/tasks/mine?${query}` : '/tasks/mine')
+    if (requestVersion !== checkTasksRequestVersion) return
     const productionTasks = productionProgressNodes(payload.data)
     checkTasks.value = productionTasks
     const selectedStillVisible = selectedCheckTask.value
       ? productionTasks.some((task) => task.node_instance_id === selectedCheckTask.value?.node_instance_id)
       : false
     if (productionTasks.length === 0) {
+      checkSelectionVersion += 1
       selectedCheckTask.value = null
       checkRecords.value = []
       return
     }
-    if (!selectedStillVisible) {
+    if (preferredNodeInstanceId !== undefined) {
+      const preferredTask = productionTasks.find((task) => task.node_instance_id === preferredNodeInstanceId)
+      if (!preferredTask) {
+        checkSelectionVersion += 1
+        selectedCheckTask.value = null
+        checkRecords.value = []
+        return
+      }
+      await selectCheckTask(preferredTask)
+    } else if (!selectedStillVisible) {
       await selectCheckTask(productionTasks[0])
     } else if (selectedCheckTask.value) {
-      await loadCheckRecords(selectedCheckTask.value.node_instance_id)
+      await loadCheckRecords(selectedCheckTask.value.node_instance_id, checkSelectionVersion)
     }
   } catch (error) {
+    if (requestVersion !== checkTasksRequestVersion) return
     checkError.value = error instanceof Error ? error.message : '入检出检任务加载失败'
   } finally {
-    checkTasksLoading.value = false
+    if (requestVersion === checkTasksRequestVersion) checkTasksLoading.value = false
   }
 }
 
 async function selectCheckTask(task: WorkerTaskItem) {
+  const selectionVersion = ++checkSelectionVersion
   selectedCheckTask.value = task
   checkType.value = task.node_status === 'COMPLETED' ? 2 : 1
   checkPass.value = true
   checkRemark.value = ''
   checkReworkToNodeId.value = ''
   checkResult.value = null
-  await loadCheckRecords(task.node_instance_id)
+  await loadCheckRecords(task.node_instance_id, selectionVersion)
 }
 
-async function loadCheckRecords(nodeInstanceId: number) {
+async function loadCheckRecords(nodeInstanceId: number, selectionVersion = checkSelectionVersion) {
   checkError.value = ''
   try {
     const payload = await apiFetch<CheckRecordResponse[]>(`/check-records/${nodeInstanceId}`)
+    if (
+      selectionVersion !== checkSelectionVersion
+      || selectedCheckTask.value?.node_instance_id !== nodeInstanceId
+    ) return
     checkRecords.value = payload.data
   } catch (error) {
+    if (
+      selectionVersion !== checkSelectionVersion
+      || selectedCheckTask.value?.node_instance_id !== nodeInstanceId
+    ) return
     checkRecords.value = []
     checkError.value = error instanceof Error ? error.message : '检查记录加载失败'
   }
@@ -9823,8 +9905,7 @@ async function submitCheckRecord() {
     checkResult.value = payload.data
     checkRemark.value = ''
     checkReworkToNodeId.value = ''
-    await loadCheckRecords(selectedCheckTask.value.node_instance_id)
-    await loadCheckTasks()
+    await loadCheckTasks(selectedCheckTask.value.node_instance_id)
   } catch (error) {
     checkError.value = error instanceof Error ? error.message : '提交入检/出检失败'
   } finally {
@@ -11581,6 +11662,7 @@ watch(() => adminOrderPagedRows.value.map((order) => order.order_id).join(','), 
 
 onMounted(() => {
   window.addEventListener('focus', refreshSessionOnWindowFocus)
+  void restoreLoginSessionFromCookie()
 })
 
 onBeforeUnmount(() => {
@@ -11695,6 +11777,15 @@ onBeforeUnmount(() => {
             </option>
           </select>
         </label>
+        <el-tooltip v-if="portalTone === 'production'" content="查看当前页面说明和操作提示" placement="bottom">
+          <button
+            class="factory-help-button"
+            type="button"
+            aria-label="生产端帮助"
+            data-testid="production-help-open"
+            @click="adminHelpDrawerVisible = true"
+          >?</button>
+        </el-tooltip>
         <div v-if="!isProductionReferenceView && portalTone !== 'admin'" class="status-actions">
           <el-tag type="success" round>{{ roleLabels(currentUser?.roles) }}已登录</el-tag>
           <el-tag effect="plain" round>{{ roleLabels(currentUser?.roles) }}</el-tag>
@@ -13124,7 +13215,7 @@ onBeforeUnmount(() => {
         <section v-else-if="isCheckRecordsRoute" class="factory-scan-page">
           <header class="factory-page-heading">
             <div><h2>扫码登记</h2><p>输入订单号或节点编号，定位当前账号可执行的真实任务。</p></div>
-            <button class="factory-btn-g" type="button" :disabled="checkTasksLoading" @click="loadCheckTasks">↻ 刷新任务</button>
+            <button class="factory-btn-g" type="button" :disabled="checkTasksLoading" @click="loadCheckTasks()">↻ 刷新任务</button>
           </header>
 
           <div class="factory-scan-lookup">
@@ -18947,7 +19038,7 @@ onBeforeUnmount(() => {
 
       <el-drawer
         v-model="adminHelpDrawerVisible"
-        title="页面帮助"
+        :title="portalTone === 'production' ? '生产端帮助' : '页面帮助'"
         size="420px"
         class="admin-drawer"
         modal-class="admin-drawer-overlay"

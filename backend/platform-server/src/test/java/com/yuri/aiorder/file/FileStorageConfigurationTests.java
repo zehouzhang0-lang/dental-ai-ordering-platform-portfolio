@@ -28,6 +28,7 @@ class FileStorageConfigurationTests {
                 7200,
                 1024L,
                 List.of("application/pdf"),
+                List.of("pdf"),
                 3);
         FileStorageConfiguration configuration = new FileStorageConfiguration();
         MinioClient presignClient = configuration.presignMinioClient(properties);

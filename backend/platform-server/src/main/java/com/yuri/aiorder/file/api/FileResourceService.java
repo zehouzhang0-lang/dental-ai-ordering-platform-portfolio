@@ -64,7 +64,7 @@ public class FileResourceService {
     }
 
     public UploadTokenResponse createUploadToken(UploadTokenRequest request, BootstrapIdentity identity) {
-        validateUploadLimits(request.orderId(), request.contentType(), request.fileSize());
+        validateUploadLimits(request.orderId(), request.originalFilename(), request.contentType(), request.fileSize());
         OrderScope orderScope = loadOrderScope(
                 request.orderId(), identity, "identity cannot upload to this order", false);
         String sourceType = normalizeCode(request.sourceType());
@@ -239,7 +239,7 @@ public class FileResourceService {
     }
 
     public MultipartInitiateResponse initiateMultipartUpload(MultipartInitiateRequest request, BootstrapIdentity identity) {
-        validateUploadLimits(request.orderId(), request.contentType(), request.fileSize());
+        validateUploadLimits(request.orderId(), request.originalFilename(), request.contentType(), request.fileSize());
         OrderScope orderScope = loadOrderScope(
                 request.orderId(), identity, "identity cannot upload to this order", false);
         String sourceType = normalizeCode(request.sourceType());
@@ -761,9 +761,12 @@ public class FileResourceService {
                 .single() > 0;
     }
 
-    private void validateUploadLimits(long orderId, String contentType, long fileSize) {
+    private void validateUploadLimits(long orderId, String originalFilename, String contentType, long fileSize) {
         if (fileSize > properties.maxFileSizeBytes()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "file exceeds current size limit");
+        }
+        if (!isAllowedFilenameExtension(originalFilename)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "file name extension is not allowed");
         }
         if (!isAllowedContentType(contentType)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "file content type is not allowed");
@@ -771,6 +774,23 @@ public class FileResourceService {
         if (properties.maxFilesPerOrder() > 0 && activeFileCount(orderId) >= properties.maxFilesPerOrder()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "order file count exceeds current limit");
         }
+    }
+
+    private boolean isAllowedFilenameExtension(String originalFilename) {
+        if (properties.allowedFilenameExtensions() == null || properties.allowedFilenameExtensions().isEmpty()) {
+            return true;
+        }
+        if (originalFilename == null) {
+            return false;
+        }
+        int separator = originalFilename.lastIndexOf('.');
+        if (separator <= 0 || separator == originalFilename.length() - 1) {
+            return false;
+        }
+        String extension = originalFilename.substring(separator + 1).trim().toLowerCase(Locale.ROOT);
+        return properties.allowedFilenameExtensions().stream()
+                .map(value -> value == null ? "" : value.trim().toLowerCase(Locale.ROOT))
+                .anyMatch(extension::equals);
     }
 
     private boolean isAllowedContentType(String contentType) {

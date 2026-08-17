@@ -16,5 +16,6 @@ public record FileStorageProperties(
         int downloadUrlTtlSeconds,
         long maxFileSizeBytes,
         List<String> allowedContentTypes,
+        List<String> allowedFilenameExtensions,
         int maxFilesPerOrder) {
 }

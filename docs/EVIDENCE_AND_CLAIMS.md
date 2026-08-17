@@ -8,7 +8,7 @@
 | AI runtime exists | Verified from source | “Implements a configurable, governed AI assistant gateway with deterministic fallback.” |
 | Autonomous Agent or RAG | Unsupported and not claimed | Do not use this description. |
 | Real model enabled in production | Not established by this snapshot | Say “real-model adapters exist; production enablement and output quality require separate evidence.” |
-| Automated release | Verified for the pinned Actions run | “The pinned release passed 348 backend tests and the recorded build/deploy probes.” |
+| Automated release | Verified for the pinned Actions run | “The pinned release passed 350 backend tests and the recorded build/deploy probes.” |
 | Complete manual acceptance | Not established | Keep separate from CI and deployment evidence. |
 | Real payment/logistics integration | Unsupported | Describe these as human-entered business ledgers and workflow gates. |
 | Physical deletion of ordinary attachments | Unsupported | “Deleted records cannot receive new authorized URLs; storage uses soft deletion.” |
@@ -29,3 +29,13 @@ environment. Their safe current-snapshot status is:
 - BUG-021: internal object-storage access and public signing endpoints are
   separated in code; a real-browser upload/preview/download run in the target
   environment remains a separate acceptance requirement.
+
+The 2026-08-16 regression release adds code-level fixes and targeted checks for
+BUG-011, BUG-020, and BUG-025 through BUG-029: attachment restoration after
+refresh, doctor attachment-removal actions with audit-preserving soft deletion,
+filename-extension allowlisting, HttpOnly refresh-cookie session restoration,
+390-pixel customer-service layout, a production help entry, and exact
+inspection-task selection with asynchronous race guards. BUG-013 was a
+regression confirmation of existing synchronous mutual exclusion, not a new
+implementation in this delta. These statements do not imply a new complete
+external acceptance run.

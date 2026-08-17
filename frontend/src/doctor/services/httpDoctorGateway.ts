@@ -23,6 +23,17 @@ import type {
   ReviewDecisionInput
 } from '../types/contracts'
 
+const allowedDoctorUploadExtensions = new Set([
+  'stl', 'sla', 'ply', 'obj', 'pdf', 'jpg', 'jpeg', 'png', 'webp',
+  'dcm', 'dicom', 'zip', 'doc', 'docx', 'txt'
+])
+
+function hasAllowedDoctorUploadExtension(filename: string) {
+  const separator = filename.lastIndexOf('.')
+  if (separator <= 0 || separator === filename.length - 1) return false
+  return allowedDoctorUploadExtensions.has(filename.slice(separator + 1).toLowerCase())
+}
+
 type LegacyPublicProgressItem = {
   key: string
   label: string
@@ -1048,6 +1059,7 @@ export class LegacyHttpDoctorGateway implements DoctorGateway {
     if (!Number.isSafeInteger(numericOrderId) || numericOrderId <= 0) throw new Error('请先保存有效草稿后再上传文件')
     const uploaded: DoctorFile[] = []
     for (const file of files) {
+      if (!hasAllowedDoctorUploadExtension(file.name)) throw new Error(`文件 ${file.name} 的格式不受支持`)
       if (file.size > 500 * 1024 * 1024) throw new Error(`文件 ${file.name} 超过 500MB 限制`)
       const resumed = await this.resumePendingOrderUpload(numericOrderId, file)
       const upload: MultipartUploadPlan = resumed ?? {

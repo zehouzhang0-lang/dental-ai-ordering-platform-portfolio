@@ -50,6 +50,7 @@ app:
     download-url-ttl-seconds: ${FILE_DOWNLOAD_URL_TTL_SECONDS:7200}
     max-file-size-bytes: ${FILE_MAX_FILE_SIZE_BYTES:524288000}
     allowed-content-types: ${FILE_ALLOWED_CONTENT_TYPES:application/pdf,model/stl,application/sla,application/octet-stream,text/plain,image/png,image/jpeg,image/webp,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/zip,application/x-zip-compressed}
+    allowed-filename-extensions: ${FILE_ALLOWED_FILENAME_EXTENSIONS:stl,sla,ply,obj,pdf,jpg,jpeg,png,webp,dcm,dicom,zip,doc,docx,txt}
     max-files-per-order: ${FILE_MAX_FILES_PER_ORDER:30}
   notification:
     instance-id: ${APP_INSTANCE_ID:${random.uuid}}
